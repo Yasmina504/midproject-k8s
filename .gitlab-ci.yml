@@ -121,7 +121,7 @@ deploy:
   image: williamyeh/ansible:alpine3
   before_script:
     - mkdir -p ~/.ssh
-    - echo "$SSH_PRIVATE_KEY" | base64 -d > ~/.ssh/id_rsa
+    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
     - chmod 600 ~/.ssh/id_rsa
     - ssh-keyscan -H 172.16.60.128 >> ~/.ssh/known_hosts
   script:
@@ -131,3 +131,4 @@ deploy:
     - main
   when: always
   allow_failure: true
+

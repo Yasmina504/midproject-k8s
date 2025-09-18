@@ -1,0 +1,133 @@
+stages:
+  - lint
+  - build
+  - build_docker
+  - scan
+  - deploy
+
+# =====================
+# Lint Jobs
+# =====================
+lint_backend:
+  image: python:3.11
+  stage: lint
+  script:
+    - cd backend
+    - pip install -r requirements.txt
+    - pylint . || true
+  allow_failure: true
+  only:
+    - main
+
+lint_frontend:
+  image: node:18
+  stage: lint
+  script:
+    - cd frontend
+    - npm install
+    - npm run lint || true
+  allow_failure: true
+  only:
+    - main
+
+# =====================
+# Build Jobs
+# =====================
+build_backend:
+  image: python:3.11
+  stage: build
+  script:
+    - cd backend
+    - pip install -r requirements.txt
+  only:
+    - main
+
+build_frontend:
+  image: node:18
+  stage: build
+  script:
+    - cd frontend
+    - npm install
+    - npm run build
+  artifacts:
+    paths:
+      - frontend/build
+  only:
+    - main
+
+# =====================
+# Build Docker Jobs + Push to Docker Hub
+# =====================
+build_docker_backend:
+  image: docker:24.0.2
+  services:
+    - docker:dind
+  stage: build_docker
+  script:
+    - echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin || true
+    - docker build -t yasmina504/backend backend/ || true
+    - docker push yasmina504/backend || true
+  allow_failure: true
+  only:
+    - main
+
+build_docker_frontend:
+  image: docker:24.0.2
+  services:
+    - docker:dind
+  stage: build_docker
+  script:
+    - echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin || true
+    - docker build -t yasmina504/frontend frontend/ || true
+    - docker push yasmina504/frontend || true
+  allow_failure: true
+  only:
+    - main
+
+# =====================
+# Scan Jobs
+# =====================
+scan_backend:
+  image: docker:24.0.2
+  services:
+    - docker:dind
+  stage: scan
+  script:
+    - docker pull yasmina504/backend || true
+    - docker rm -f backend_scaled || true
+    - docker run -d --name backend_scaled -p 8000:8000 yasmina504/backend || true
+  allow_failure: true
+  only:
+    - main
+
+scan_frontend:
+  image: docker:24.0.2
+  services:
+    - docker:dind
+  stage: scan
+  script:
+    - docker pull yasmina504/frontend || true
+    - docker rm -f frontend_scaled || true
+    - docker run -d --name frontend_scaled -p 3000:3000 yasmina504/frontend || true
+  allow_failure: true
+  only:
+    - main
+
+# =====================
+# Deploy with Ansible
+# =====================
+deploy:
+  stage: deploy
+  image: williamyeh/ansible:alpine3
+  before_script:
+    - mkdir -p ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" | base64 -d > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H 172.16.60.128 >> ~/.ssh/known_hosts
+  script:
+    - ansible-galaxy collection install community.postgresql:2.13.0 --force
+    - ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -b
+  only:
+    - main
+  when: always
+  allow_failure: true

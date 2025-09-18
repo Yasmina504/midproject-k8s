@@ -116,9 +116,6 @@ scan_frontend:
 # =====================
 # Deploy with Ansible
 # =====================
-stages:
-  - deploy
-
 deploy:
   stage: deploy
   image: alpine:latest

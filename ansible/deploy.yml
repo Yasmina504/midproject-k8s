@@ -1,48 +1,32 @@
 ---
-- name: Deploy 3-Tier Application
-  hosts: all
-  become: yes
+- name: Deploy 3-Tier App with Docker Compose
+  hosts: app_server
+  become: true
+
+  vars:
+    project_dir: /home/yasmina/tier-app
 
   tasks:
-
-    - name: Install PostgreSQL
-      apt:
-        name: postgresql
-        state: present
-
-    - name: Ensure PostgreSQL service is running
-      service:
-        name: postgresql
-        state: started
-        enabled: yes
-
-    - name: Create DB user
-      community.postgresql.postgresql_user:
-        name: myuser
-        password: mypassword
-        state: present
-      become_user: postgres
-
-    - name: Create database
-      community.postgresql.postgresql_db:
-        name: mydb
-        owner: myuser
-        state: present
-      become_user: postgres
-
-    - name: Copy backend files
-      copy:
-        src: ../backend/
-        dest: /home/yasmina/backend/
+    - name: Create project directory on server
+      file:
+        path: "{{ project_dir }}"
+        state: directory
         owner: yasmina
         group: yasmina
         mode: '0755'
 
-    - name: Copy frontend files
-      copy:
-        src: ../frontend/
-        dest: /home/yasmina/frontend/
-        owner: yasmina
-        group: yasmina
-        mode: '0755'
+    - name: Copy project files from local to server
+      synchronize:
+        src: "{{ playbook_dir }}/../"
+        dest: "{{ project_dir }}/"
+        recursive: yes
+        delete: yes
+      delegate_to: localhost
+      become: false   # 👈 مهم عشان ما يطلبش sudo على جهازك
+
+    - name: Run docker compose up
+      shell: |
+        docker compose -f {{ project_dir }}/docker-compose.yml up -d
+      args:
+        chdir: "{{ project_dir }}"
 

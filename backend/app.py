@@ -1,16 +1,10 @@
-from flask import Flask, jsonify
+import os
+from sqlalchemy import create_engine
 
-app = Flask(__name__)
+DATABASE_URL = (
+    f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}"
+    f"@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
+)
 
-@app.route("/")
-def index():
-    return jsonify({"message": "Backend is running!"})
-
-# لو عندك routes تانية خليها زي ما هي
-@app.route("/health")
-def health():
-    return jsonify({"status": "ok"})
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+engine = create_engine(DATABASE_URL)
 

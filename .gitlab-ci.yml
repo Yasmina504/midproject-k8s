@@ -116,19 +116,29 @@ scan_frontend:
 # =====================
 # Deploy with Ansible
 # =====================
+stages:
+  - deploy
+
+variables:
+  ANSIBLE_HOST_KEY_CHECKING: "False"
+  SSH_KNOWN_HOSTS: "172.16.60.128"
+
 deploy:
   stage: deploy
-  image: williamyeh/ansible:alpine3
+  image: python:3.11
   before_script:
+    # احفظ مفتاح SSH من GitLab variable إلى ملف
     - mkdir -p ~/.ssh
-    - echo "$SSH_PRIVATE_KEY" | base64 -d > ~/.ssh/id_rsa
-    - chmod 600 ~/.ssh/id_rsa
-    - ssh-keyscan -H 172.16.60.128 >> ~/.ssh/known_hosts
+    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa_tierapp
+    - chmod 600 ~/.ssh/id_rsa_tierapp
+    # أضف السيرفر إلى known_hosts عشان نتجنب prompt
+    - ssh-keyscan -H $SSH_KNOWN_HOSTS >> ~/.ssh/known_hosts
+    # ركّب Ansible والموديل الخاص بالـ Docker
+    - pip install ansible
+    - ansible-galaxy collection install community.docker
   script:
-    - ANSIBLE_HOST_KEY_CHECKING=False ansible-galaxy collection install community.postgresql:2.13.0 --force || true
-    - ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -u yasmina --private-key=~/.ssh/id_rsa
+    # شغّل playbook على السيرفر البعيد
+    - ansible-playbook -i ansible/inventory.ini ansible/deploy.yml
   only:
     - main
-  when: always
-  allow_failure: false
 

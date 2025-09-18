@@ -119,19 +119,19 @@ scan_frontend:
 stages:
   - deploy
 
-variables:
-  ANSIBLE_HOST_KEY_CHECKING: "False"
-
 deploy:
   stage: deploy
-  image: williamyeh/ansible:alpine3
-  only:
-    - main
+  image: alpine:latest
   before_script:
+    - apk add --no-cache ansible openssh-client bash
     - mkdir -p ~/.ssh
-    - echo "$SSH_PRIVATE_KEY" | base64 -d > ~/.ssh/id_rsa
+    - chmod 700 ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
     - chmod 600 ~/.ssh/id_rsa
     - ssh-keyscan -H 172.16.60.128 >> ~/.ssh/known_hosts
   script:
-    - ansible-playbook -i ansible/inventory.ini ansible/deploy.yml
+    - ansible-playbook -i ansible/inventory ansible/deploy.yml -b
+  when: always
+  variables:
+    ANSIBLE_HOST_KEY_CHECKING: "False"
 

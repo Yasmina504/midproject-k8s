@@ -1,0 +1,59 @@
+---
+- name: Install Docker on Ubuntu VM
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Remove old Docker repository if exists
+      file:
+        path: /etc/apt/sources.list.d/download_docker_com_linux_ubuntu.list
+        state: absent
+
+    - name: Remove old keyrings if conflict exists
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /usr/share/keyrings/docker-archive-keyring.asc
+        - /usr/share/keyrings/docker-archive-keyring.gpg
+
+    - name: Update apt and install dependencies
+      apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+        cache_valid_time: 3600
+      loop:
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - gnupg
+        - lsb-release
+
+    - name: Add Docker’s official GPG key
+      ansible.builtin.shell: |
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+        | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+      args:
+        creates: /usr/share/keyrings/docker-archive-keyring.gpg
+
+    - name: Set up Docker repository
+      copy:
+        dest: /etc/apt/sources.list.d/download_docker_com_linux_ubuntu.list
+        content: |
+          deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu plucky stable
+
+    - name: Update apt again
+      apt:
+        update_cache: yes
+
+    - name: Install Docker Engine
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - docker-ce
+        - docker-ce-cli
+        - containerd.io
+        - docker-compose-plugin
+

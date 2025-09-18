@@ -1,0 +1,48 @@
+---
+- name: Deploy 3-Tier Application
+  hosts: all
+  become: yes
+
+  tasks:
+
+    - name: Install PostgreSQL
+      apt:
+        name: postgresql
+        state: present
+
+    - name: Ensure PostgreSQL service is running
+      service:
+        name: postgresql
+        state: started
+        enabled: yes
+
+    - name: Create DB user
+      community.postgresql.postgresql_user:
+        name: myuser
+        password: mypassword
+        state: present
+      become_user: postgres
+
+    - name: Create database
+      community.postgresql.postgresql_db:
+        name: mydb
+        owner: myuser
+        state: present
+      become_user: postgres
+
+    - name: Copy backend files
+      copy:
+        src: ../backend/
+        dest: /home/yasmina/backend/
+        owner: yasmina
+        group: yasmina
+        mode: '0755'
+
+    - name: Copy frontend files
+      copy:
+        src: ../frontend/
+        dest: /home/yasmina/frontend/
+        owner: yasmina
+        group: yasmina
+        mode: '0755'
+

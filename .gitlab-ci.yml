@@ -125,8 +125,9 @@ deploy:
     - chmod 600 ~/.ssh/id_rsa
     - ssh-keyscan -H 172.16.60.128 >> ~/.ssh/known_hosts
   script:
-    - ansible-galaxy collection install community.postgresql:2.13.0 --force
-    - ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -b
+  - ansible-galaxy collection install community.postgresql:2.13.0 --force --ignore-errors
+  - ansible-playbook -i ansible/inventory.ini ansible/deploy.yml -b
+
   only:
     - main
   when: always

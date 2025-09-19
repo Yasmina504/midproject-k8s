@@ -17,7 +17,7 @@ lint_backend:
     - pylint . || true
   allow_failure: true
   only:
-    - main
+    - dev
 
 lint_frontend:
   image: node:18
@@ -28,7 +28,7 @@ lint_frontend:
     - npm run lint || true
   allow_failure: true
   only:
-    - main
+    - dev
 
 # =====================
 # Build Jobs
@@ -40,7 +40,7 @@ build_backend:
     - cd backend
     - pip install -r requirements.txt
   only:
-    - main
+    - dev
 
 build_frontend:
   image: node:18
@@ -53,7 +53,7 @@ build_frontend:
     paths:
       - frontend/build
   only:
-    - main
+    - dev
 
 # =====================
 # Build Docker Jobs + Push to Docker Hub
@@ -69,7 +69,7 @@ build_docker_backend:
     - docker push yasmina504/backend || true
   allow_failure: true
   only:
-    - main
+    - dev
 
 build_docker_frontend:
   image: docker:24.0.2
@@ -82,7 +82,7 @@ build_docker_frontend:
     - docker push yasmina504/frontend || true
   allow_failure: true
   only:
-    - main
+    - dev
 
 # =====================
 # Scan Jobs
@@ -98,7 +98,7 @@ scan_backend:
     - docker run -d --name backend_scaled -p 8000:8000 yasmina504/backend || true
   allow_failure: true
   only:
-    - main
+    - dev
 
 scan_frontend:
   image: docker:24.0.2
@@ -111,7 +111,7 @@ scan_frontend:
     - docker run -d --name frontend_scaled -p 3000:3000 yasmina504/frontend || true
   allow_failure: true
   only:
-    - main
+    - dev
 
 # =====================
 # Deploy with Ansible
@@ -128,7 +128,9 @@ deploy:
     - ssh-keyscan -H 172.16.60.128 >> ~/.ssh/known_hosts
   script:
     - ansible-playbook -i ansible/inventory ansible/deploy.yml -b
-  when: always
+  when: on_success
   variables:
     ANSIBLE_HOST_KEY_CHECKING: "False"
+  only:
+    - dev
 

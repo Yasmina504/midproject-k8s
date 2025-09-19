@@ -85,13 +85,13 @@ build_docker_frontend:
     - yasmina-main
 
 # =====================
-# Scan Jobs
+# Scan Jobs (Trivial)
 # =====================
 scan_backend:
   image: docker:24.0.2
-  stage: scan
   services:
     - docker:dind
+  stage: scan
   script:
     - docker pull yasmina504/backend || true
     - docker images | grep backend
@@ -101,9 +101,9 @@ scan_backend:
 
 scan_frontend:
   image: docker:24.0.2
-  stage: scan
   services:
     - docker:dind
+  stage: scan
   script:
     - docker pull yasmina504/frontend || true
     - docker images | grep frontend
@@ -129,4 +129,6 @@ deploy:
   when: always
   variables:
     ANSIBLE_HOST_KEY_CHECKING: "False"
+  only:
+    - yasmina-main
 

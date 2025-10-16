@@ -1,0 +1,116 @@
+---
+- name: Deploy app on Kubernetes (Minikube)
+  hosts: localhost
+  connection: local
+
+  tasks:
+    - name: Create Kubernetes namespace
+      kubernetes.core.k8s:
+        api_version: v1
+        kind: Namespace
+        name: demo-namespace
+
+    - name: Create ConfigMap
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: nginx-config
+            namespace: demo-namespace
+          data:
+            index.html: |
+              <html>
+              <body style="text-align:center;">
+                <h1>Welcome Yasmina 🌸</h1>
+                <p>This Nginx is deployed via Ansible & Minikube!</p>
+              </body>
+              </html>
+
+    - name: Create Secret
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: my-secret
+            namespace: demo-namespace
+          stringData:
+            username: yasmina
+            password: mypassword123
+
+    - name: Deploy Nginx app
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: nginx-deploy
+            namespace: demo-namespace
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: nginx
+            template:
+              metadata:
+                labels:
+                  app: nginx
+              spec:
+                containers:
+                  - name: nginx
+                    image: nginx
+                    ports:
+                      - containerPort: 80
+                    volumeMounts:
+                      - name: html
+                        mountPath: /usr/share/nginx/html
+                volumes:
+                  - name: html
+                    configMap:
+                      name: nginx-config
+
+    - name: Expose Nginx service
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: nginx-service
+            namespace: demo-namespace
+          spec:
+            selector:
+              app: nginx
+            ports:
+              - port: 80
+                targetPort: 80
+            type: NodePort
+
+    - name: Create Ingress
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: nginx-ingress
+            namespace: demo-namespace
+            annotations:
+              nginx.ingress.kubernetes.io/rewrite-target: /
+          spec:
+            rules:
+              - host: yasmina.local
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: nginx-service
+                          port:
+                            number: 80
+
